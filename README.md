@@ -1,24 +1,27 @@
 # TesdyPom 🍅
 
-An AJ's branded Pomodoro timer built with Flutter — track your focus sessions, earn XP, unlock achievements, and grow a little plant while you work.
+An AJ's branded Pomodoro timer built with Flutter — track your focus sessions, tag tasks, jot notes, hit your daily goal, and earn XP while you work.
 
 > Built with the AJ's design palette: deep forest green + brass gold on warm cream paper.
 
 ## ✨ Features
 
 - **Standard Pomodoro flow** – 25 min work / 5 min break, or fully **custom durations**
+- **Task tagging** – tag each session with what you're working on (pick a past task or type a new one)
+- **Session notes** – add an optional note to every focus session
+- **Daily goal** – set a target of pomodoros per day and watch a progress bar fill (turns gold when reached)
+- **Auto-start** – optionally auto-begin each session so the timer keeps flowing
+- **Stats dashboard**
+  - Total focus time, today's minutes, best day, and daily average
+  - Per-task breakdown so you can see where your time goes
+  - Persisted via `shared_preferences`
+- **This week** bar chart + today's session count + daily streak 🔥
 - **Gamification**
   - **XP & levels** – earn XP per completed session (20 XP, level up every 100 XP)
   - **Achievements** – 8 unlockable badges with celebration toasts
-  - **Daily streak** counter 🔥
-- **Stats & history**
-  - Persisted via `shared_preferences`
-  - **This week** bar chart + today's session count
-- **Notifications** – sound alert + haptic feedback on session end
-- **MVP touches**
-  - Growing **plant mascot** that blooms as you rack up sessions
   - **Confetti** 🎉 + bonus XP when you complete a 4-pomodoro cycle
-  - Rotating **motivational quotes** on break
+- **Notifications** – sound alert + haptic feedback on session end
+- **Rotating motivational quotes** on break
 - **Theme** – light cream AJ's brand theme (green focus / gold break)
 
 ## 🚀 Getting Started
@@ -58,9 +61,9 @@ flutter test
 lib/
   main.dart          # entry point
   theme.dart         # AJ's brand palette & theme
-  models.dart        # stats, achievements, motivational quotes
+  models.dart        # stats, sessions, achievements, motivational quotes
   storage.dart       # persistence layer (shared_preferences)
-  pomodoro_page.dart # timer UI, gamification, confetti, mascot
+  pomodoro_page.dart # timer UI, tasks, notes, goal, stats, gamification
 test/
   widget_test.dart   # smoke test
 ```
@@ -73,4 +76,4 @@ test/
 
 ## 📄 License
 
-Private repository.
+Public repository, made available for educational purposes.
