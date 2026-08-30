@@ -45,6 +45,9 @@ class _PomodoroPageState extends State<PomodoroPage>
   int _sessionCounter = 0;
   SessionType _session = SessionType.work;
   bool _isRunning = false;
+  String _currentTask = '';
+  final TextEditingController _noteController = TextEditingController();
+  final TextEditingController _taskController = TextEditingController();
 
   Timer? _ticker;
   final StatsStore _store = StatsStore();
@@ -80,6 +83,8 @@ class _PomodoroPageState extends State<PomodoroPage>
   void dispose() {
     _ticker?.cancel();
     _confettiTicker?.dispose();
+    _noteController.dispose();
+    _taskController.dispose();
     super.dispose();
   }
 
@@ -134,6 +139,8 @@ class _PomodoroPageState extends State<PomodoroPage>
       final counterToday = _stats.todayCount() + 1;
       final completedCycle =
           counterToday > 0 && counterToday % 4 == 0;
+      final note = _noteController.text.trim();
+      final task = _currentTask.trim();
 
       setState(() {
         _sessionCounter++;
@@ -141,6 +148,15 @@ class _PomodoroPageState extends State<PomodoroPage>
         _stats.xp += _xpPerSession;
         final key = _dayKey(DateTime.now());
         _stats.dailySessions[key] = counterToday;
+        _stats.sessions.insert(
+          0,
+          SessionRecord(
+            completedAt: DateTime.now(),
+            task: task,
+            note: note,
+            workMinutes: _workMinutes,
+          ),
+        );
       });
       await _store.save(_stats);
       _evaluateAchievements(showUnlocks: true);
@@ -150,20 +166,35 @@ class _PomodoroPageState extends State<PomodoroPage>
         _celebrateCycle();
       }
 
+      final willAuto = _stats.autoStart;
       setState(() {
         _session = SessionType.breakSession;
         _totalSeconds = _breakMinutes * 60;
-        _isRunning = false;
+        _isRunning = willAuto;
         _quoteIndex = math.Random().nextInt(motivationalQuotes.length);
+        _noteController.clear();
       });
-      _breakSnack('Take a well-earned break! 🌿');
+      if (willAuto) {
+        _ticker =
+            Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+      }
+      _breakSnack(willAuto
+          ? 'Break started automatically — refresh! ☕'
+          : 'Take a well-earned break! 🌿');
     } else {
+      final willAuto = _stats.autoStart;
       setState(() {
         _session = SessionType.work;
         _totalSeconds = _workMinutes * 60;
-        _isRunning = false;
+        _isRunning = willAuto;
       });
-      _breakSnack('Back to focus — let\'s go! 🚀');
+      if (willAuto) {
+        _ticker =
+            Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+      }
+      _breakSnack(willAuto
+          ? 'Focus started automatically — let\'s go! 🚀'
+          : 'Back to focus — let\'s go! 🚀');
     }
   }
 
@@ -279,68 +310,105 @@ class _PomodoroPageState extends State<PomodoroPage>
         TextEditingController(text: _workMinutes.toString());
     final breakController =
         TextEditingController(text: _breakMinutes.toString());
+    final goalController =
+        TextEditingController(text: _stats.dailyGoal.toString());
+    var autoStart = _stats.autoStart;
     final formKey = GlobalKey<FormState>();
 
-    final result = await showDialog<Map<String, int>>(
+    final result = await showDialog<Map<String, Object>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Customize durations'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: workController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Work minutes',
-                  icon: Icon(Icons.work),
-                ),
-                validator: (value) => _validateMinutes(value),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Settings'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: workController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Work minutes',
+                      icon: Icon(Icons.work),
+                    ),
+                    validator: (value) => _validateMinutes(value),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: breakController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Break minutes',
+                      icon: Icon(Icons.self_improvement),
+                    ),
+                    validator: (value) => _validateMinutes(value),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: goalController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Daily pomodoro goal',
+                      icon: Icon(Icons.flag),
+                    ),
+                    validator: (value) {
+                      final n = int.tryParse(value ?? '');
+                      if (n == null || n < 1 || n > 50) {
+                        return 'Enter a number between 1 and 50';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Auto-start next session'),
+                    subtitle: const Text('Automatically begin each session'),
+                    value: autoStart,
+                    onChanged: (v) =>
+                        setDialogState(() => autoStart = v),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: breakController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Break minutes',
-                  icon: Icon(Icons.self_improvement),
-                ),
-                validator: (value) => _validateMinutes(value),
-              ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  Navigator.pop(context, {
+                    'work': int.parse(workController.text),
+                    'break': int.parse(breakController.text),
+                    'goal': int.parse(goalController.text),
+                    'auto': autoStart,
+                  });
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.pop(context, {
-                  'work': int.parse(workController.text),
-                  'break': int.parse(breakController.text),
-                });
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
 
     if (result != null && mounted) {
       setState(() {
-        _workMinutes = result['work']!;
-        _breakMinutes = result['break']!;
+        _workMinutes = result['work'] as int;
+        _breakMinutes = result['break'] as int;
+        _stats.dailyGoal = result['goal'] as int;
+        _stats.autoStart = result['auto'] as bool;
         _totalSeconds = _workMinutes * 60;
         _session = SessionType.work;
         _isRunning = false;
       });
       _ticker?.cancel();
+      _store.save(_stats);
     }
   }
 
@@ -398,6 +466,7 @@ class _PomodoroPageState extends State<PomodoroPage>
                   children: [
                     _buildLevelBar(colorScheme),
                     const SizedBox(height: 12),
+                    if (isWork) _buildTaskSelector(colorScheme),
                     Text(
                       isWork ? 'FOCUS' : 'BREAK',
                       style: Theme.of(context)
@@ -411,12 +480,18 @@ class _PomodoroPageState extends State<PomodoroPage>
                     ),
                     const SizedBox(height: 20),
                     _buildTimerCircle(sessionColor),
+                    if (isWork && _stats.dailyGoal > 0) ...[
+                      const SizedBox(height: 20),
+                      _buildDailyGoalBar(colorScheme),
+                    ],
                     const SizedBox(height: 24),
                     _buildControls(),
                     const SizedBox(height: 16),
                     _buildStatusLine(),
                     const SizedBox(height: 24),
                     _buildWeekChart(colorScheme),
+                    const SizedBox(height: 16),
+                    _buildStatsDashboard(colorScheme),
                     const SizedBox(height: 16),
                     _buildAchievementsRow(colorScheme),
                   ],
@@ -566,6 +641,229 @@ class _PomodoroPageState extends State<PomodoroPage>
       label: Text(label),
       visualDensity: VisualDensity.compact,
     );
+  }
+
+  Widget _buildTaskSelector(ColorScheme colorScheme) {
+    final tasks = _stats.taskNames;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.task_alt, size: 18, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('What are you working on?',
+                    style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (tasks.isNotEmpty)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final t in tasks)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(t),
+                          selected: _currentTask == t,
+                          onSelected: (sel) => setState(() {
+                            _noteController.clear();
+                            _currentTask = sel ? t : '';
+                          }),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _taskController,
+                    decoration: const InputDecoration(
+                      hintText: 'Or type a new task',
+                      isDense: true,
+                      prefixIcon: Icon(Icons.edit, size: 18),
+                    ),
+                    onSubmitted: (v) {
+                      final t = v.trim();
+                      if (t.isEmpty) return;
+                      setState(() {
+                        _currentTask = t;
+                        _taskController.clear();
+                      });
+                      FocusScope.of(context).unfocus();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    final t = _taskController.text.trim();
+                    if (t.isEmpty) return;
+                    setState(() {
+                      _currentTask = t;
+                      _taskController.clear();
+                    });
+                    FocusScope.of(context).unfocus();
+                  },
+                  child: const Text('Set'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _noteController,
+              enabled: _currentTask.isNotEmpty,
+              decoration: const InputDecoration(
+                hintText: 'Add a note for this session (optional)',
+                isDense: true,
+                prefixIcon: Icon(Icons.sticky_note_2, size: 18),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDailyGoalBar(ColorScheme colorScheme) {
+    final done = _stats.todayCount();
+    final goal = _stats.dailyGoal;
+    final progress = _stats.todayGoalProgress;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Daily goal',
+                    style: Theme.of(context).textTheme.bodyMedium),
+                Text('$done / $goal',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                color: done >= goal ? Brand.gold600 : colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsDashboard(ColorScheme colorScheme) {
+    final totalHours = _stats.totalFocusMinutes / 60.0;
+    final todayMins = _stats.todayFocusMinutes();
+    final best = _stats.bestDayCount();
+    final avg = _stats.avgPerDay(7);
+    final tasks = _stats.taskNames;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Your stats',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _statTile(colorScheme, Icons.timer,
+                    _fmtHours(totalHours), 'total focus'),
+                _statTile(colorScheme, Icons.today, '${todayMins}m', 'today'),
+                _statTile(colorScheme, Icons.star, '$best', 'best day'),
+                _statTile(colorScheme, Icons.query_stats,
+                    avg.toStringAsFixed(1), 'avg/day'),
+              ],
+            ),
+            if (tasks.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('By task', style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 8),
+              for (final t in tasks.take(5)) _taskRow(colorScheme, t),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statTile(
+      ColorScheme cs, IconData icon, String value, String label) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: cs.primary, size: 22),
+          const SizedBox(height: 4),
+          Text(value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+
+  Widget _taskRow(ColorScheme cs, String task) {
+    final count = _stats.taskSessions(task);
+    final maxCount = _stats.taskNames
+        .map((t) => _stats.taskSessions(t))
+        .fold(1, (a, b) => a > b ? a : b);
+    final ratio = maxCount == 0 ? 0.0 : count / maxCount;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(task,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: ratio,
+                minHeight: 8,
+                backgroundColor: cs.surfaceContainerHighest,
+                color: Brand.green600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text('$count', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  String _fmtHours(double hours) {
+    if (hours < 1) return '${(hours * 60).round()}m';
+    final h = hours.floor();
+    final m = ((hours - h) * 60).round();
+    return m == 0 ? '${h}h' : '${h}h ${m}m';
   }
 
   Widget _buildWeekChart(ColorScheme colorScheme) {

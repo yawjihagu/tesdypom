@@ -1,24 +1,54 @@
 import 'package:flutter/material.dart';
 
+class SessionRecord {
+  final DateTime completedAt;
+  final String task;
+  final String note;
+  final int workMinutes;
+
+  SessionRecord({
+    required this.completedAt,
+    required this.task,
+    required this.note,
+    required this.workMinutes,
+  });
+
+  Map<String, dynamic> toJson() => {
+        't': completedAt.toIso8601String(),
+        'task': task,
+        'note': note,
+        'm': workMinutes,
+      };
+
+  factory SessionRecord.fromJson(Map<String, dynamic> json) => SessionRecord(
+        completedAt: DateTime.parse((json['t'] as String?) ?? ''),
+        task: (json['task'] as String?) ?? '',
+        note: (json['note'] as String?) ?? '',
+        workMinutes: (json['m'] as num?)?.toInt() ?? 25,
+      );
+}
+
 class AppStats {
   int totalSessions;
   int xp;
   Map<String, int> dailySessions;
+  List<SessionRecord> sessions;
+  int dailyGoal;
+  bool autoStart;
 
   AppStats({
     this.totalSessions = 0,
     this.xp = 0,
     Map<String, int>? dailySessions,
-  }) : dailySessions = dailySessions ?? {};
+    List<SessionRecord>? sessions,
+    this.dailyGoal = 8,
+    this.autoStart = false,
+  })  : dailySessions = dailySessions ?? {},
+        sessions = sessions ?? [];
 
   int get level => _levelForXp(xp);
   int get currentLevelXp => _levelFloor(level);
   int get nextLevelXp => _levelFloor(level + 1);
-  double get levelProgress {
-    final span = nextLevelXp - currentLevelXp;
-    if (span <= 0) return 1;
-    return ((xp - currentLevelXp) / span).clamp(0.0, 1.0);
-  }
 
   static int _levelFloor(int lvl) => (lvl - 1) * 100;
 
@@ -26,6 +56,56 @@ class AppStats {
     if (xp <= 0) return 1;
     return (xp ~/ 100) + 1;
   }
+  double get levelProgress {
+    final span = nextLevelXp - currentLevelXp;
+    if (span <= 0) return 1;
+    return ((xp - currentLevelXp) / span).clamp(0.0, 1.0);
+  }
+
+  double get todayGoalProgress {
+    if (dailyGoal <= 0) return 0;
+    return (todayCount() / dailyGoal).clamp(0.0, 1.0);
+  }
+
+  int get totalFocusMinutes =>
+      sessions.fold(0, (sum, s) => sum + s.workMinutes);
+
+  int todayFocusMinutes([DateTime? now]) {
+    final d = now ?? DateTime.now();
+    return sessions
+        .where((s) => _sameDay(s.completedAt, d))
+        .fold(0, (sum, s) => sum + s.workMinutes);
+  }
+
+  int bestDayCount([DateTime? now]) {
+    final d = now ?? DateTime.now();
+    var best = 0;
+    if (dailySessions.isEmpty) return 0;
+    // Consider the last 30 days.
+    for (var i = 0; i < 30; i++) {
+      final day = d.subtract(Duration(days: i));
+      final c = countOn(day);
+      if (c > best) best = c;
+    }
+    return best;
+  }
+
+  double avgPerDay([int days = 7]) =>
+      totalForLastNDays(days) / (days == 0 ? 1 : days);
+
+  List<String> get taskNames {
+    final seen = <String>{};
+    for (final s in sessions) {
+      if (s.task.isNotEmpty) seen.add(s.task);
+    }
+    return seen.toList()..sort();
+  }
+
+  int taskSessions(String task) =>
+      sessions.where((s) => s.task == task).length;
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   int todayCount([DateTime? now]) {
     final d = now ?? DateTime.now();

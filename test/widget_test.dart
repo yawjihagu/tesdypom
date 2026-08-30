@@ -8,6 +8,6 @@ void main() {
 
     expect(find.text('FOCUS'), findsOneWidget);
     expect(find.text('25:00'), findsOneWidget);
-    expect(find.textContaining('today'), findsOneWidget);
+    expect(find.textContaining('today'), findsWidgets);
   });
 }
