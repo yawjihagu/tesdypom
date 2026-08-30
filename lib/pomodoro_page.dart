@@ -398,8 +398,6 @@ class _PomodoroPageState extends State<PomodoroPage>
                   children: [
                     _buildLevelBar(colorScheme),
                     const SizedBox(height: 12),
-                    _buildMascot(colorScheme, sessionColor),
-                    const SizedBox(height: 8),
                     Text(
                       isWork ? 'FOCUS' : 'BREAK',
                       style: Theme.of(context)
@@ -466,17 +464,6 @@ class _PomodoroPageState extends State<PomodoroPage>
           '🔥 ${_stats.currentStreak()} day streak',
           style: const TextStyle(fontSize: 12),
         ),
-      ),
-    );
-  }
-
-  Widget _buildMascot(ColorScheme colorScheme, Color sessionColor) {
-    // A plant that grows as you complete pomodoros.
-    final stage = (_stats.totalSessions ~/ 5).clamp(0, 5);
-    return SizedBox(
-      height: 90,
-      child: CustomPaint(
-        painter: _PlantPainter(stage: stage, color: Brand.green700),
       ),
     );
   }
@@ -810,53 +797,4 @@ class _GradientRingPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _GradientRingPainter oldDelegate) =>
       oldDelegate.value != value || oldDelegate.color != color;
-}
-
-class _PlantPainter extends CustomPainter {
-  final int stage;
-  final Color color;
-  _PlantPainter({required this.stage, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset(size.width / 2, size.height * 0.95));
-    // Pot
-    final potPaint = Paint()..color = Brand.green900;
-    final potPath = Path()
-      ..moveTo(c.dx - 24, c.dy)
-      ..lineTo(c.dx - 18, c.dy - 26)
-      ..lineTo(c.dx + 18, c.dy - 26)
-      ..lineTo(c.dx + 24, c.dy)
-      ..close();
-    canvas.drawPath(potPath, potPaint);
-
-    // Stem
-    final stemPaint = Paint()
-      ..color = color
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    final stemTop = Offset(c.dx, c.dy - 26 - stage * 6);
-    canvas.drawLine(Offset(c.dx, c.dy - 24), stemTop, stemPaint);
-
-    // Leaves
-    final leafPaint = Paint()..color = color;
-    for (var i = 0; i < stage; i++) {
-      final y = c.dy - 26 - i * 9;
-      final side = i.isEven ? 1 : -1;
-      final leafPath = Path()
-        ..moveTo(c.dx, y)
-        ..quadraticBezierTo(c.dx + side * 22, y - 8, c.dx + side * 20, y + 14)
-        ..close();
-      canvas.drawPath(leafPath, leafPaint);
-    }
-
-    // Flower on top when fully grown
-    if (stage >= 5) {
-      canvas.drawCircle(stemTop, 6, Paint()..color = Brand.gold500);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _PlantPainter oldDelegate) =>
-      oldDelegate.stage != stage;
 }

@@ -1,8 +1,8 @@
 # TesdyPom 🍅
 
-An MBHTE-TESD branded Pomodoro timer built with Flutter — track your focus sessions, earn XP, unlock achievements, and grow a little plant while you work.
+An AJ's branded Pomodoro timer built with Flutter — track your focus sessions, earn XP, unlock achievements, and grow a little plant while you work.
 
-> Built with the official MBHTE-TESD design palette: deep forest green + brass gold on warm cream paper.
+> Built with the AJ's design palette: deep forest green + brass gold on warm cream paper.
 
 ## ✨ Features
 
@@ -19,7 +19,7 @@ An MBHTE-TESD branded Pomodoro timer built with Flutter — track your focus ses
   - Growing **plant mascot** that blooms as you rack up sessions
   - **Confetti** 🎉 + bonus XP when you complete a 4-pomodoro cycle
   - Rotating **motivational quotes** on break
-- **Theme** – light cream MBHTE-TESD brand theme (green focus / gold break)
+- **Theme** – light cream AJ's brand theme (green focus / gold break)
 
 ## 🚀 Getting Started
 
@@ -57,7 +57,7 @@ flutter test
 ```
 lib/
   main.dart          # entry point
-  theme.dart         # MBHTE-TESD brand palette & theme
+  theme.dart         # AJ's brand palette & theme
   models.dart        # stats, achievements, motivational quotes
   storage.dart       # persistence layer (shared_preferences)
   pomodoro_page.dart # timer UI, gamification, confetti, mascot

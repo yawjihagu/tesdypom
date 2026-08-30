@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// MBHTE-TESD brand palette.
+/// AJ's brand palette.
 /// Deep forest green + brass gold on warm cream paper,
 /// from the official design tokens (css/tokens.css).
 class Brand {
