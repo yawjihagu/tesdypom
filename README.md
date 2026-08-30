@@ -24,7 +24,33 @@ An AJ's branded Pomodoro timer built with Flutter — track your focus sessions,
 - **Rotating motivational quotes** on break
 - **Theme** – light cream AJ's brand theme (green focus / gold break)
 
-## 🚀 Getting Started
+## 📲 Install on your phone
+
+### Android (phones/tablets)
+
+The app ships as an Android APK on the **Releases** page. To install it:
+
+1. Open the releases page, download `app-release.apk`:
+   `https://github.com/yawjihagu/tesdypom/releases`
+2. Transfer the `.apk` file to your phone (USB cable, or download it directly in the phone's browser).
+3. Tap the file. Android will warn that it's "from an unknown developer" — tap **Install anyway** / **Allow from this source**. The app is not on the Play Store, so this step is required.
+4. Open **TesdyPom** from your app drawer.
+
+> ⚠️ The APK is signed with a development key, which is normal for sideloaded apps and fine for personal use.
+
+### iPhone / iOS
+
+**Not yet available.** TesdyPom is currently built for **Android and Linux only**. iOS support requires:
+
+- A Mac with **Xcode**
+- Adding the `ios/` platform to this Flutter project
+- An Apple Developer account to install on a device / publish to the App Store
+
+Until then, the iOS version isn't available to install. Follow this repo's releases to be notified when it ships.
+
+---
+
+## 🚀 Getting Started (for developers)
 
 ### Prerequisites
 
