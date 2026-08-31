@@ -148,6 +148,7 @@ class _PomodoroPageState extends State<PomodoroPage>
         _stats.xp += _xpPerSession;
         final key = _dayKey(DateTime.now());
         _stats.dailySessions[key] = counterToday;
+        _stats.addTask(task);
         _stats.sessions.insert(
           0,
           SessionRecord(
@@ -696,8 +697,11 @@ class _PomodoroPageState extends State<PomodoroPage>
                       if (t.isEmpty) return;
                       setState(() {
                         _currentTask = t;
+                        _stats.addTask(t);
                         _taskController.clear();
                       });
+                      _store.save(_stats);
+                      _showSnack('Task set: $t');
                       FocusScope.of(context).unfocus();
                     },
                   ),
@@ -709,8 +713,11 @@ class _PomodoroPageState extends State<PomodoroPage>
                     if (t.isEmpty) return;
                     setState(() {
                       _currentTask = t;
+                      _stats.addTask(t);
                       _taskController.clear();
                     });
+                    _store.save(_stats);
+                    _showSnack('Task set: $t');
                     FocusScope.of(context).unfocus();
                   },
                   child: const Text('Set'),

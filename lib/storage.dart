@@ -11,6 +11,7 @@ class StatsStore {
   static const _sessionsKey = 'pomodoro.sessions';
   static const _goalKey = 'pomodoro.dailyGoal';
   static const _autoKey = 'pomodoro.autoStart';
+  static const _tasksKey = 'pomodoro.tasks';
 
   Future<AppStats> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -27,11 +28,13 @@ class StatsStore {
       } catch (_) {}
     }
     final sessions = _decodeSessions(prefs.getString(_sessionsKey));
+    final tasks = prefs.getStringList(_tasksKey) ?? <String>[];
     return AppStats(
       totalSessions: total,
       xp: xp,
       dailySessions: daily,
       sessions: sessions,
+      tasks: tasks,
       dailyGoal: goal,
       autoStart: autoStart,
     );
@@ -55,6 +58,7 @@ class StatsStore {
     await prefs.setInt(_totalKey, stats.totalSessions);
     await prefs.setInt(_goalKey, stats.dailyGoal);
     await prefs.setBool(_autoKey, stats.autoStart);
+    await prefs.setStringList(_tasksKey, stats.tasks);
     await prefs.setString(_dailyKey, jsonEncode(stats.dailySessions));
     await prefs.setString(
         _sessionsKey,

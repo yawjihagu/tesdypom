@@ -35,16 +35,19 @@ class AppStats {
   List<SessionRecord> sessions;
   int dailyGoal;
   bool autoStart;
+  List<String> tasks;
 
   AppStats({
     this.totalSessions = 0,
     this.xp = 0,
     Map<String, int>? dailySessions,
     List<SessionRecord>? sessions,
+    List<String>? tasks,
     this.dailyGoal = 8,
     this.autoStart = false,
   })  : dailySessions = dailySessions ?? {},
-        sessions = sessions ?? [];
+        sessions = sessions ?? [],
+        tasks = tasks ?? [];
 
   int get level => _levelForXp(xp);
   int get currentLevelXp => _levelFloor(level);
@@ -94,11 +97,17 @@ class AppStats {
       totalForLastNDays(days) / (days == 0 ? 1 : days);
 
   List<String> get taskNames {
-    final seen = <String>{};
+    final seen = <String>{...tasks};
     for (final s in sessions) {
       if (s.task.isNotEmpty) seen.add(s.task);
     }
     return seen.toList()..sort();
+  }
+
+  void addTask(String name) {
+    final t = name.trim();
+    if (t.isEmpty) return;
+    if (!tasks.contains(t)) tasks.add(t);
   }
 
   int taskSessions(String task) =>
